@@ -2,6 +2,7 @@ import argparse
 import uvicorn # type: ignore
 from starlette.applications import Starlette # type: ignore
 from starlette.routing import Mount, Route # type: ignore
+from starlette.responses import JSONResponse # type: ignore
 from mcp.server import Server # type: ignore
 from mcp.server.sse import SseServerTransport # type: ignore
 from starlette.requests import Request # type: ignore
@@ -100,11 +101,17 @@ def create_starlette_app(mcp_server: Server, *, debug: bool = False) -> Starlett
                 write_stream,
                 mcp_server.create_initialization_options(),
             )
+    
+    # Add health check endpoint for Kubernetes
+    async def health_check(request: Request) -> JSONResponse:
+        """Health check endpoint for Kubernetes liveness and readiness probes."""
+        return JSONResponse({"status": "ok", "service": "plex-mcp-server"})
 
     return Starlette(
         debug=debug,
         routes=[
             Route("/sse", endpoint=handle_sse),
+            Route("/health", endpoint=health_check),
             Mount("/messages/", app=sse.handle_post_message),
         ],
     )
@@ -133,4 +140,5 @@ if __name__ == "__main__":
         starlette_app = create_starlette_app(mcp_server, debug=args.debug)
         print(f"Starting SSE server on http://{args.host}:{args.port}")
         print("Access the SSE endpoint at /sse")
+        print("Health check endpoint available at /health")
         uvicorn.run(starlette_app, host=args.host, port=args.port)
