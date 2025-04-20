@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - secret.yaml
+
+# Replace these placeholders with actual values during CI/CD
+replacements:
+  - source:
+      kind: Secret
+      name: plex-mcp-secrets
+    targets:
+      - select:
+          kind: Deployment
+        fieldPaths:
+          - spec.template.spec.containers.[name=plex-mcp-server].env.[name=PLEX_URL].valueFrom.secretKeyRef.name
+          - spec.template.spec.containers.[name=plex-mcp-server].env.[name=PLEX_TOKEN].valueFrom.secretKeyRef.name
+
+# ConfigMap generator for non-sensitive configuration
+# configMapGenerator:
+#   - name: plex-mcp-config
+#     literals:
+#       - HOST=0.0.0.0
+#       - PORT=3001
+#       - TRANSPORT=sse
+
+# Placeholder for image tag that will be replaced in CI/CD
+images:
+  - name: ${IMAGE_NAME}
+    newName: PLACEHOLDER_IMAGE_NAME
+    newTag: PLACEHOLDER_IMAGE_TAG

@@ -98,6 +98,77 @@ When the server is running in SSE mode, configure your client to connect using:
 
 With SSE, you can connect to the server via web applications or tools that support SSE connections.
 
+## Docker Deployment
+
+The Plex MCP Server can be run as a Docker container for easier deployment and isolation.
+
+### Building the Docker Image
+```bash
+docker build -t your-username/plex-mcp-server:latest .
+```
+
+### Running with Docker
+```bash
+docker run -p 3001:3001 \
+  -e PLEX_URL=http://your-plex-server:32400 \
+  -e PLEX_TOKEN=your-plex-token \
+  your-username/plex-mcp-server:latest
+```
+
+### Using the Pre-built Image from Docker Hub
+```bash
+docker pull your-username/plex-mcp-server:latest
+```
+
+## Kubernetes Deployment with Argo CD
+
+This project includes Kubernetes manifests for deployment using Argo CD, a declarative GitOps continuous delivery tool.
+
+### Prerequisites
+- Kubernetes cluster with Argo CD installed
+- kubectl configured to communicate with your cluster
+- Docker Hub account (for storing container images)
+
+### Setup GitHub Actions for CI/CD
+
+1. Add the following secrets to your GitHub repository:
+   - `DOCKERHUB_USERNAME`: Your Docker Hub username
+   - `DOCKERHUB_TOKEN`: Your Docker Hub access token
+
+2. Push your code to GitHub. The GitHub Actions workflow will:
+   - Build the Docker image
+   - Push it to Docker Hub under `your-username/plex-mcp-server`
+   - Tag it based on git branch, tag, or commit SHA
+
+### Deploy to Kubernetes with Argo CD
+
+1. Update the ArgoCD application manifest:
+   - Edit `k8s/argocd-application.yaml` to point to your GitHub repository
+   - Update the image reference in `k8s/base/kustomization.yaml`
+
+2. Create the Kubernetes secret with your Plex credentials:
+   ```bash
+   kubectl create namespace plex-services
+   kubectl create secret generic plex-mcp-secrets \
+     --namespace plex-services \
+     --from-literal=plex-url=http://your-plex-server:32400 \
+     --from-literal=plex-token=your-plex-token
+   ```
+
+3. Apply the Argo CD application:
+   ```bash
+   kubectl apply -f k8s/argocd-application.yaml
+   ```
+
+4. Argo CD will synchronize your application and deploy it to the `plex-services` namespace
+
+5. Access your Plex MCP server through the Kubernetes service:
+   ```bash
+   kubectl port-forward -n plex-services svc/plex-mcp-server 3001:80
+   ```
+
+6. Test the connection at http://localhost:3001/sse
+
 ## Command Modules
 
 ### Library Module
